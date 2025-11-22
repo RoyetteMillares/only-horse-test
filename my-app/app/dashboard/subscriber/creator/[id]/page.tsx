@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
@@ -19,14 +19,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Star, MessageCircle, Heart, Share2 } from 'lucide-react'
+import { Star, MessageCircle, Heart, Share2, Calendar } from 'lucide-react'
+import { BookingRequestModal } from '@/components/booking/BookingRequestModal'
+import { VerificationBanner } from '@/components/verification/VerificationBanner'
 
 interface Creator {
   id: string
   name: string
   image?: string
   bio?: string
-  hourlyRate: number
+  hourlyRate: number | null
+  minHours: number | null
+  location: string | null
   status: string
   kycStatus: string
   _count: {
@@ -39,13 +43,16 @@ interface Creator {
 export default function CreatorDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  // Unwrap params Promise using React.use() (Next.js 16 requirement)
+  const { id: creatorId } = use(params)
   const { data: session, status } = useSession()
   const router = useRouter()
   const [creator, setCreator] = useState<Creator | null>(null)
   const [loading, setLoading] = useState(true)
   const [showSubscribeDialog, setShowSubscribeDialog] = useState(false)
+  const [showBookingDialog, setShowBookingDialog] = useState(false)
   const [selectedTier, setSelectedTier] = useState('BASIC')
   const [isSubscribing, setIsSubscribing] = useState(false)
 
@@ -55,9 +62,13 @@ export default function CreatorDetailPage({
       return
     }
 
+    if (!creatorId) {
+      return
+    }
+
     const fetchCreator = async () => {
       try {
-        const response = await fetch(`/api/creators/${params.id}`)
+        const response = await fetch(`/api/creators/${creatorId}`)
         if (!response.ok) throw new Error('Creator not found')
         const data = await response.json()
         setCreator(data)
@@ -70,7 +81,7 @@ export default function CreatorDetailPage({
     }
 
     fetchCreator()
-  }, [params.id, status, router])
+  }, [creatorId, status, router])
 
   const handleSubscribe = async () => {
     if (!creator) return
@@ -136,6 +147,8 @@ export default function CreatorDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <DashboardHeader />
+      
       {/* Hero Section */}
       <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 py-8">
@@ -194,8 +207,40 @@ export default function CreatorDetailPage({
                 </div>
               </div>
 
+              {/* Hourly Rate Display */}
+              {creator.hourlyRate && creator.hourlyRate > 0 && (
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2 text-lg">
+                    <span className="text-gray-600">Hourly Rate:</span>
+                    <span className="font-bold text-blue-600">
+                      ${creator.hourlyRate.toFixed(2)}/hour
+                    </span>
+                    {creator.minHours && (
+                      <span className="text-gray-500 text-sm">
+                        (Min: {creator.minHours} hours)
+                      </span>
+                    )}
+                  </div>
+                  {creator.location && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      📍 Location: {creator.location}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
+                {creator.hourlyRate && creator.hourlyRate > 0 && (
+                  <Button
+                    size="lg"
+                    onClick={() => setShowBookingDialog(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Calendar className="w-5 h-5 mr-2" />
+                    Request Booking
+                  </Button>
+                )}
                 <Button
                   size="lg"
                   onClick={() => setShowSubscribeDialog(true)}
@@ -214,6 +259,25 @@ export default function CreatorDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Booking Request Dialog */}
+      {creator && creator.hourlyRate && creator.hourlyRate > 0 && (
+        <BookingRequestModal
+          open={showBookingDialog}
+          onOpenChange={setShowBookingDialog}
+          creator={{
+            id: creator.id,
+            name: creator.name,
+            hourlyRate: creator.hourlyRate,
+            minHours: creator.minHours || 2,
+            location: creator.location,
+            kycStatus: creator.kycStatus,
+          }}
+          onBookingCreated={() => {
+            setShowBookingDialog(false)
+          }}
+        />
+      )}
 
       {/* Subscription Dialog */}
       <Dialog open={showSubscribeDialog} onOpenChange={setShowSubscribeDialog}>

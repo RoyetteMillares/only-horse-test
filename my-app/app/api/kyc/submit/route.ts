@@ -41,26 +41,55 @@ export async function POST(req: NextRequest) {
       where: { userId: session.user.id },
     })
 
-    if (existingKyc) {
+    // If KYC already exists and is not REJECTED, don't allow resubmission
+    if (existingKyc && existingKyc.status !== 'REJECTED') {
+      const statusMessage = 
+        existingKyc.status === 'PENDING'
+          ? 'KYC already submitted and is pending review. Please wait for verification.'
+          : existingKyc.status === 'VERIFIED'
+          ? 'Your account is already verified.'
+          : 'KYC already submitted. Please wait for verification.'
+      
       return NextResponse.json(
-        { error: 'KYC already submitted. Please wait for verification.' },
+        { error: statusMessage },
         { status: 400 }
       )
     }
 
-    const kyc = await db.kYCSubmission.create({
-      data: {
-        userId: session.user.id,
-        firstName,
-        lastName,
-        dateOfBirth: new Date(dateOfBirth),
-        governmentIdType: idType,
-        governmentIdNumber: governmentIdNumber.trim(),
-        governmentIdImageUrl: constructS3Url(governmentIdKey),
-        livelinessImageUrl: constructS3Url(livelinessKey),
-        status: 'PENDING',
-      },
-    })
+    // If existing KYC is REJECTED, update it instead of creating new
+    // Otherwise create new submission
+    let kyc
+    if (existingKyc && existingKyc.status === 'REJECTED') {
+      kyc = await db.kYCSubmission.update({
+        where: { userId: session.user.id },
+        data: {
+          firstName,
+          lastName,
+          dateOfBirth: new Date(dateOfBirth),
+          governmentIdType: idType,
+          governmentIdNumber: governmentIdNumber.trim(),
+          governmentIdImageUrl: constructS3Url(governmentIdKey),
+          livelinessImageUrl: constructS3Url(livelinessKey),
+          status: 'PENDING',
+          rejectionReason: null, // Clear rejection reason on resubmission
+          verifiedAt: null,
+        },
+      })
+    } else {
+      kyc = await db.kYCSubmission.create({
+        data: {
+          userId: session.user.id,
+          firstName,
+          lastName,
+          dateOfBirth: new Date(dateOfBirth),
+          governmentIdType: idType,
+          governmentIdNumber: governmentIdNumber.trim(),
+          governmentIdImageUrl: constructS3Url(governmentIdKey),
+          livelinessImageUrl: constructS3Url(livelinessKey),
+          status: 'PENDING',
+        },
+      })
+    }
 
     await db.user.update({
       where: { id: session.user.id },

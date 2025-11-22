@@ -65,20 +65,26 @@ export function FeedRightSidebar({ creators = [] }: FeedRightSidebarProps) {
               <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                 {creator.image ? (
                   <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0">
-                    {creator.image.startsWith('/') ? (
-                      <Image
-                        src={creator.image}
-                        alt={creator.name || 'Creator'}
-                        width={64}
-                        height={64}
-                        className="object-cover"
-                      />
+                    {creator.image && creator.image.trim() ? (
+                      creator.image.startsWith('/') ? (
+                        <Image
+                          src={creator.image}
+                          alt={creator.name || 'Creator'}
+                          width={64}
+                          height={64}
+                          className="object-cover"
+                        />
+                      ) : (
+                        <img
+                          src={creator.image || undefined}
+                          alt={creator.name || 'Creator'}
+                          className="w-full h-full object-cover"
+                        />
+                      )
                     ) : (
-                      <img
-                        src={creator.image}
-                        alt={creator.name || 'Creator'}
-                        className="w-full h-full object-cover"
-                      />
+                      <div className="w-full h-full bg-purple-600 flex items-center justify-center text-white font-semibold text-xl">
+                        {creator.name?.charAt(0).toUpperCase() || '?'}
+                      </div>
                     )}
                   </div>
                 ) : (

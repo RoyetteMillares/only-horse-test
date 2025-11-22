@@ -261,7 +261,7 @@ export function CameraCapture({ onCapture, onClose, label, aspectRatio = 4 / 3 }
             <div className="space-y-4">
               <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio }}>
                 <img
-                  src={capturedImage}
+                  src={capturedImage || undefined}
                   alt="Captured"
                   className="w-full h-full object-contain"
                 />

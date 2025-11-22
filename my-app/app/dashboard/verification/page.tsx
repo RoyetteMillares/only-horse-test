@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader'
 import { VerificationWizard } from '@/components/kyc/VerificationWizard'
 import { VerificationBanner } from '@/components/verification/VerificationBanner'
@@ -16,6 +17,8 @@ export default function VerificationPage() {
   const router = useRouter()
   const [kycStatus, setKycStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [statusLoading, setStatusLoading] = useState(true) // Track if we're fetching status
+  const hasFetchedStatus = useRef(false) // Prevent infinite loop - only fetch once
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -24,11 +27,77 @@ export default function VerificationPage() {
     }
   }, [sessionStatus, router])
 
+  // Fetch actual KYC status from database on page load
+  // This ensures we show the correct status even if session is stale
+  // Only fetch once to prevent infinite loop
+  // — Royette
   useEffect(() => {
-    if (session?.user) {
-      setKycStatus(session.user.kycStatus || 'NOT_STARTED')
+    // Prevent infinite loop - only fetch once
+    if (hasFetchedStatus.current) return
+    
+    const fetchKycStatus = async () => {
+      if (!session?.user?.id) {
+        setStatusLoading(false)
+        return
+      }
+
+      // Mark as fetched to prevent re-fetching
+      hasFetchedStatus.current = true
+
+      try {
+        setStatusLoading(true)
+        // Fetch actual status from database
+        const response = await fetch('/api/users/profile')
+        if (response.ok) {
+          const user = await response.json()
+          if (user?.kycStatus) {
+            console.log('roy: Fetched actual KYC status from database:', user.kycStatus)
+            setKycStatus(user.kycStatus)
+            // Only update session if it's actually different (not on every fetch)
+            if (session.user.kycStatus !== user.kycStatus) {
+              // Update session in background without blocking
+              if (updateSession) {
+                updateSession().catch((err) => {
+                  console.error('roy: Error updating session:', err)
+                })
+              }
+            }
+          } else {
+            // No status in database, default to NOT_STARTED
+            setKycStatus('NOT_STARTED')
+          }
+        } else {
+          // Fallback to session status if fetch fails
+          if (session?.user?.kycStatus) {
+            setKycStatus(session.user.kycStatus)
+          } else {
+            setKycStatus('NOT_STARTED')
+          }
+        }
+      } catch (error) {
+        console.error('roy: Error fetching KYC status:', error)
+        // Fallback to session status
+        if (session?.user?.kycStatus) {
+          setKycStatus(session.user.kycStatus)
+        } else {
+          setKycStatus('NOT_STARTED')
+        }
+      } finally {
+        setStatusLoading(false)
+      }
     }
-  }, [session])
+
+    if (session?.user) {
+      // Set initial status from session first
+      setKycStatus(session.user.kycStatus || 'NOT_STARTED')
+      // Then fetch actual status from database (only once)
+      fetchKycStatus()
+    } else {
+      setStatusLoading(false)
+    }
+    // Only depend on session.user.id to prevent re-runs when session object changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id])
 
   // Refresh session after successful KYC submission
   const handleKYCSubmitted = async () => {
@@ -46,15 +115,24 @@ export default function VerificationPage() {
     }, 1500)
   }
 
-  if (sessionStatus === 'loading') {
+  if (sessionStatus === 'loading' || statusLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-600">Loading...</p>
+        <p className="text-gray-600">Loading verification status...</p>
       </div>
     )
   }
 
-  const currentStatus = kycStatus || session?.user?.kycStatus || 'NOT_STARTED'
+  // Use kycStatus from state (fetched from database) or fallback to session
+  const currentStatus = kycStatus !== null ? kycStatus : (session?.user?.kycStatus || 'NOT_STARTED')
+  
+  // Debug log to see what status is being used
+  console.log('roy: Verification page status:', { 
+    kycStatus, 
+    sessionStatus: session?.user?.kycStatus, 
+    currentStatus,
+    statusLoading 
+  })
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -72,10 +150,12 @@ export default function VerificationPage() {
           </p>
         </div>
 
-        {/* Verification Status Banner */}
-        <div className="mb-6">
-          <VerificationBanner />
-        </div>
+        {/* Verification Status Banner - Only show for NOT_STARTED or REJECTED (not PENDING or VERIFIED, those have detailed cards below) */}
+        {(currentStatus === 'NOT_STARTED' || currentStatus === 'REJECTED') && (
+          <div className="mb-6">
+            <VerificationBanner kycStatus={currentStatus} />
+          </div>
+        )}
 
         {/* Status Cards */}
         {currentStatus === 'VERIFIED' && (
@@ -123,9 +203,13 @@ export default function VerificationPage() {
               <p className="text-yellow-800 mb-2">
                 Your verification documents have been submitted and are currently being reviewed.
               </p>
-              <p className="text-sm text-yellow-700">
+              <p className="text-sm text-yellow-700 mb-4">
                 We typically verify accounts within 24-48 hours. You'll receive an email notification once your verification is complete.
               </p>
+              <div className="flex items-center space-x-2 text-sm text-yellow-700">
+                <Clock className="w-4 h-4" />
+                <span>Please wait while we review your documents. Do not submit again.</span>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -152,8 +236,9 @@ export default function VerificationPage() {
           </Card>
         )}
 
-        {/* Verification Wizard - Show for NOT_STARTED or REJECTED */}
-        {(currentStatus === 'NOT_STARTED' || currentStatus === 'REJECTED') && (
+        {/* Verification Wizard - Only show for NOT_STARTED or REJECTED (not PENDING or VERIFIED) */}
+        {/* Hide wizard while loading status or while submitting */}
+        {!statusLoading && !loading && currentStatus !== 'PENDING' && currentStatus !== 'VERIFIED' && (currentStatus === 'NOT_STARTED' || currentStatus === 'REJECTED') && (
           <VerificationWizard
             onComplete={async (data) => {
               // Handle wizard completion - upload files and submit
@@ -206,14 +291,70 @@ export default function VerificationPage() {
 
                 if (!response.ok) {
                   const errorData = await response.json().catch(() => ({}))
-                  throw new Error(errorData.error || 'Failed to submit verification')
+                  const errorMessage = errorData.error || 'Failed to submit verification'
+                  
+                  // If already submitted, refetch status from database and refresh
+                  if (errorMessage.includes('already submitted') || errorMessage.includes('pending review')) {
+                    toast.info('Verification already submitted', {
+                      description: 'Your verification is already in progress. Please wait for review.',
+                    })
+                    
+                    // Refetch actual status from database
+                    try {
+                      const profileRes = await fetch('/api/users/profile')
+                      if (profileRes.ok) {
+                        const user = await profileRes.json()
+                        if (user?.kycStatus) {
+                          console.log('roy: Refetched KYC status after error:', user.kycStatus)
+                          setKycStatus(user.kycStatus)
+                        }
+                      }
+                    } catch (err) {
+                      console.error('roy: Error refetching status:', err)
+                      // Fallback to PENDING if refetch fails
+                      setKycStatus('PENDING')
+                    }
+                    
+                    // Refresh session immediately to sync with database
+                    if (updateSession) {
+                      await updateSession()
+                    }
+                    router.refresh()
+                    
+                    // Force page reload after a short delay to ensure status is correct
+                    setTimeout(() => {
+                      window.location.reload()
+                    }, 1000)
+                    return
+                  }
+                  
+                  throw new Error(errorMessage)
                 }
 
-                // Refresh session
-                handleKYCSubmitted()
+                // Immediately set status to PENDING to hide wizard and show status
+                setKycStatus('PENDING')
+                
+                toast.success('Verification submitted successfully!', {
+                  description: 'We will review your documents within 24-48 hours.',
+                })
+
+                // Refresh session immediately to update banner
+                if (updateSession) {
+                  await updateSession()
+                }
+                router.refresh()
+                
+                // Force session refresh after a short delay
+                setTimeout(async () => {
+                  if (updateSession) {
+                    await updateSession()
+                  }
+                }, 1000)
               } catch (error: any) {
                 console.error('roy: Verification submission error:', error)
-                alert(error.message || 'Failed to submit verification')
+                toast.error('Failed to submit verification', {
+                  description: error.message || 'Please try again later.',
+                })
               } finally {
                 setLoading(false)
               }

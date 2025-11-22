@@ -52,8 +52,15 @@ export function VerificationWizard({ onComplete }: VerificationWizardProps) {
   }>({})
 
   const nextStep = () => {
-    if (currentStep < STEPS.length) {
-      setCurrentStep(currentStep + 1)
+    console.log('roy: Next button clicked, current step:', currentStep)
+    console.log('roy: Current files state:', files)
+    console.log('roy: Can proceed?', canProceed())
+    
+    if (currentStep < STEPS.length && canProceed()) {
+      console.log('roy: Moving to step:', currentStep + 1)
+      setCurrentStep((prev) => prev + 1)
+    } else {
+      console.log('roy: Cannot proceed - validation failed or at last step')
     }
   }
 
@@ -64,18 +71,26 @@ export function VerificationWizard({ onComplete }: VerificationWizardProps) {
   }
 
   const canProceed = () => {
+    let result = false
     switch (currentStep) {
       case 1:
-        return formData.firstName && formData.lastName && formData.dateOfBirth && formData.governmentIdNumber
+        result = !!(formData.firstName && formData.lastName && formData.dateOfBirth && formData.governmentIdNumber)
+        break
       case 2:
-        return !!files.governmentId
+        result = !!files.governmentId
+        break
       case 3:
-        return !!files.liveness
+        result = !!files.liveness
+        console.log('roy: Step 3 canProceed check:', { hasLiveness: !!files.liveness, files })
+        break
       case 4:
-        return true
+        result = true
+        break
       default:
-        return false
+        result = false
     }
+    console.log(`roy: Step ${currentStep} canProceed:`, result)
+    return result
   }
 
   const handleSubmit = () => {
@@ -251,7 +266,15 @@ export function VerificationWizard({ onComplete }: VerificationWizardProps) {
           {currentStep === 3 && (
             <SelfieCapture
               onCapture={(file) => {
-                setFiles({ ...files, liveness: file })
+                console.log('roy: Selfie captured in wizard:', file?.name, file?.size)
+                setFiles((prev) => {
+                  const updated = { ...prev, liveness: file }
+                  console.log('roy: Updated files state:', { 
+                    hasGovernmentId: !!updated.governmentId,
+                    hasLiveness: !!updated.liveness 
+                  })
+                  return updated
+                })
               }}
               existingFile={files.liveness}
             />
@@ -326,14 +349,26 @@ export function VerificationWizard({ onComplete }: VerificationWizardProps) {
           </Button>
 
           {currentStep < STEPS.length ? (
-            <Button
-              onClick={nextStep}
-              disabled={!canProceed()}
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"
-            >
-              <span>Next</span>
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+            <div className="flex flex-col items-end">
+              {!canProceed() && currentStep === 3 && (
+                <p className="text-xs text-red-600 mb-2">
+                  {files.liveness ? 'Processing...' : 'Please capture or upload your selfie first'}
+                </p>
+              )}
+              <Button
+                onClick={() => {
+                  console.log('roy: Next button clicked at step:', currentStep)
+                  console.log('roy: Files state:', { hasLiveness: !!files.liveness })
+                  console.log('roy: Can proceed:', canProceed())
+                  nextStep()
+                }}
+                disabled={!canProceed()}
+                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>Next</span>
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
           ) : (
             <Button
               onClick={handleSubmit}

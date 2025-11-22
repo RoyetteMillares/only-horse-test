@@ -93,11 +93,11 @@ export function DashboardHeader() {
                 onClick={() => setShowDropdown(!showDropdown)}
                 className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                {session.user.image ? (
+                {session.user.image && session.user.image.trim() ? (
                   <div className="relative w-8 h-8 rounded-full overflow-hidden border border-gray-300">
                     <img
                       key={session.user.image}
-                      src={session.user.image}
+                      src={session.user.image || undefined}
                       alt={session.user.name || 'Profile'}
                       className="w-full h-full object-cover"
                       onError={(e) => {

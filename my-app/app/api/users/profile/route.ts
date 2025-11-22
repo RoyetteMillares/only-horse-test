@@ -32,8 +32,38 @@ export async function GET(req: NextRequest) {
       },
     })
 
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    // Check if KYCSubmission exists and sync status to User.kycStatus
+    // This ensures User.kycStatus matches the actual KYCSubmission.status
+    // — Royette
+    const kycSubmission = await db.kYCSubmission.findUnique({
+      where: { userId: session.user.id },
+      select: { status: true },
+    })
+
+    // If KYCSubmission exists but User.kycStatus is out of sync, sync it
+    if (kycSubmission && user.kycStatus !== kycSubmission.status) {
+      console.log('roy: Syncing User.kycStatus with KYCSubmission.status:', {
+        userId: session.user.id,
+        oldStatus: user.kycStatus,
+        newStatus: kycSubmission.status,
+      })
+
+      await db.user.update({
+        where: { id: session.user.id },
+        data: { kycStatus: kycSubmission.status },
+      })
+
+      // Update user object to return correct status
+      user.kycStatus = kycSubmission.status
+    }
+
     return NextResponse.json(user)
   } catch (error) {
+    console.error('roy: Error fetching profile:', error)
     return NextResponse.json(
       { error: "Failed to fetch profile" },
       { status: 500 }

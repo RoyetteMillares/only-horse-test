@@ -28,6 +28,7 @@ export function PostCreation({ onPostCreated }: { onPostCreated?: () => void }) 
 
   // Check if user is verified
   const isVerified = session?.user?.kycStatus === 'VERIFIED'
+  const kycStatus = session?.user?.kycStatus || 'NOT_STARTED'
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
     const file = e.target.files?.[0]
@@ -209,12 +210,11 @@ export function PostCreation({ onPostCreated }: { onPostCreated?: () => void }) 
         <CardTitle className="text-gray-900">Create New Post</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Verification Banner */}
-        {!isVerified && (
-          <div className="mb-4">
-            <VerificationBanner />
-          </div>
-        )}
+        {/* Verification Banner - Always show (handles all statuses: NOT_STARTED, PENDING, REJECTED, VERIFIED) */}
+        {/* Pass kycStatus to use session status (will update when session refreshes) */}
+        <div className="mb-4">
+          <VerificationBanner kycStatus={session?.user?.kycStatus} />
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Content Textarea */}
@@ -234,7 +234,7 @@ export function PostCreation({ onPostCreated }: { onPostCreated?: () => void }) 
           </div>
 
           {/* Media Preview */}
-          {imagePreview && (
+          {imagePreview && imagePreview.trim() && (
             <div className="relative w-full aspect-square rounded-lg overflow-hidden border border-gray-300">
               <Image
                 src={imagePreview}
@@ -259,11 +259,13 @@ export function PostCreation({ onPostCreated }: { onPostCreated?: () => void }) 
 
           {videoPreview && (
             <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-300">
-              <video
-                src={videoPreview}
-                controls
-                className="w-full h-full object-cover"
-              />
+              {videoPreview && videoPreview.trim() && (
+                <video
+                  src={videoPreview}
+                  controls
+                  className="w-full h-full object-cover"
+                />
+              )}
               <button
                 type="button"
                 onClick={handleRemoveMedia}

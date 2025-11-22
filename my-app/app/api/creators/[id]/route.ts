@@ -9,6 +9,10 @@ export async function GET(
   try {
     const session = await auth()
 
+    if (!params?.id) {
+      return NextResponse.json({ error: 'Creator ID is required' }, { status: 400 })
+    }
+
     const creator = await db.user.findUnique({
       where: { id: params.id },
       select: {
@@ -17,6 +21,8 @@ export async function GET(
         image: true,
         bio: true,
         hourlyRate: true,
+        minHours: true,
+        location: true,
         createdAt: true,
         status: true,
         kycStatus: true,

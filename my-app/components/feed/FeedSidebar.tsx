@@ -13,7 +13,8 @@ import {
   Settings, 
   MoreHorizontal,
   Plus,
-  LogOut
+  LogOut,
+  Calendar
 } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ export function FeedSidebar() {
     { icon: MessageCircle, label: 'Messages', href: '/dashboard/messages' },
     { icon: Bookmark, label: 'Collections', href: '/dashboard/collections' },
     { icon: User, label: 'Subscriptions', href: '/dashboard/subscriptions' },
+    { icon: Calendar, label: 'Bookings', href: '/dashboard/subscriber/bookings', active: pathname?.startsWith('/dashboard/subscriber/bookings') },
     { icon: CreditCard, label: 'Add card', href: '/dashboard/payment' },
     { icon: Settings, label: 'My profile', href: session?.user?.role === 'CREATOR' ? '/dashboard/creator/profile' : '/dashboard/settings' },
     { icon: MoreHorizontal, label: 'More', href: '/dashboard/more' },
@@ -47,20 +49,26 @@ export function FeedSidebar() {
       <div className="p-6 border-b border-gray-200">
         {session?.user?.image ? (
           <Link href="/dashboard" className="flex items-center justify-center w-12 h-12 rounded-full overflow-hidden bg-blue-600 mx-auto">
-            {session.user.image.startsWith('/') ? (
-              <Image
-                src={session.user.image}
-                alt={session.user.name || 'User'}
-                width={48}
-                height={48}
-                className="object-cover"
-              />
+            {session.user.image && session.user.image.trim() ? (
+              session.user.image.startsWith('/') ? (
+                <Image
+                  src={session.user.image}
+                  alt={session.user.name || 'User'}
+                  width={48}
+                  height={48}
+                  className="object-cover"
+                />
+              ) : (
+                <img
+                  src={session.user.image || undefined}
+                  alt={session.user.name || 'User'}
+                  className="w-full h-full object-cover"
+                />
+              )
             ) : (
-              <img
-                src={session.user.image}
-                alt={session.user.name || 'User'}
-                className="w-full h-full object-cover"
-              />
+              <div className="w-full h-full bg-blue-600 flex items-center justify-center text-white font-semibold text-lg">
+                {session.user.name?.charAt(0).toUpperCase() || session.user.email?.charAt(0).toUpperCase() || 'U'}
+              </div>
             )}
           </Link>
         ) : (

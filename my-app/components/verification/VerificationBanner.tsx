@@ -1,23 +1,54 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, CheckCircle2, Clock, XCircle } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Clock, XCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 // Verification banner component - shows verification status and prompts to verify
+// "Account Verified" banner shows only once and can be dismissed
 // — Royette
-export function VerificationBanner({ className = '' }: { className?: string }) {
+export function VerificationBanner({ 
+  className = '',
+  kycStatus: overrideStatus 
+}: { 
+  className?: string
+  kycStatus?: string 
+}) {
   const { data: session } = useSession()
   const router = useRouter()
+  const [isDismissed, setIsDismissed] = useState(false)
+
+  // Check if user has dismissed the verified banner
+  useEffect(() => {
+    if (!session?.user?.id) return
+    
+    const dismissedKey = `verification_banner_dismissed_${session.user.id}`
+    const dismissed = localStorage.getItem(dismissedKey)
+    setIsDismissed(dismissed === 'true')
+  }, [session?.user?.id])
+
+  const handleDismiss = () => {
+    if (!session?.user?.id) return
+    
+    const dismissedKey = `verification_banner_dismissed_${session.user.id}`
+    localStorage.setItem(dismissedKey, 'true')
+    setIsDismissed(true)
+  }
 
   if (!session?.user) return null
 
-  const kycStatus = session.user.kycStatus || 'NOT_STARTED'
+  // Use override status if provided (for local state), otherwise use session
+  const kycStatus = overrideStatus || session.user.kycStatus || 'NOT_STARTED'
 
   // Show different banners based on verification status
+  // For VERIFIED status, only show once until dismissed
   if (kycStatus === 'VERIFIED') {
+    // Don't show if already dismissed
+    if (isDismissed) return null
+
     return (
       <div className={`bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between ${className}`}>
         <div className="flex items-center space-x-3">
@@ -27,6 +58,13 @@ export function VerificationBanner({ className = '' }: { className?: string }) {
             <p className="text-xs text-green-700">Your account has been verified successfully</p>
           </div>
         </div>
+        <button
+          onClick={handleDismiss}
+          className="ml-4 p-1 rounded-full hover:bg-green-100 transition-colors"
+          aria-label="Dismiss"
+        >
+          <X className="w-4 h-4 text-green-600" />
+        </button>
       </div>
     )
   }

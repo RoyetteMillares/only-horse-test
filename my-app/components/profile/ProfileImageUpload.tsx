@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Upload, X } from 'lucide-react'
+import { Upload, X, Camera, Clock } from 'lucide-react'
 import Image from 'next/image'
 import { useSession } from 'next-auth/react'
 
@@ -141,33 +141,7 @@ export function ProfileImageUpload({
   }
 
   return (
-    <div className="flex flex-col items-center space-y-4">
-      <div className="relative">
-        {preview ? (
-          <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-200">
-            <Image
-              src={preview}
-              alt="Profile"
-              fill
-              className="object-cover"
-            />
-          </div>
-        ) : (
-          <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center border-4 border-gray-300">
-            <Upload className="w-12 h-12 text-gray-400" />
-          </div>
-        )}
-        {preview && (
-          <button
-            onClick={handleRemove}
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-            type="button"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
+    <div className="flex flex-col items-center space-y-2">
       <input
         ref={fileInputRef}
         type="file"
@@ -180,19 +154,28 @@ export function ProfileImageUpload({
 
       <Button
         type="button"
-        variant="outline"
         disabled={isUploading}
         onClick={() => fileInputRef.current?.click()}
-        className="cursor-pointer"
+        className="cursor-pointer bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg rounded-full p-2.5 h-auto w-auto min-w-0"
+        size="sm"
+        title={isUploading ? 'Uploading...' : preview ? 'Change Photo' : 'Upload Photo'}
       >
         {isUploading ? (
-          'Uploading...'
-        ) : preview ? (
-          'Change Photo'
+          <Clock className="w-4 h-4 animate-spin" />
         ) : (
-          'Upload Photo'
+          <Camera className="w-4 h-4" />
         )}
       </Button>
+      {preview && (
+        <button
+          onClick={handleRemove}
+          className="bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-lg transition-colors"
+          type="button"
+          title="Remove photo"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
     </div>
   )
 }

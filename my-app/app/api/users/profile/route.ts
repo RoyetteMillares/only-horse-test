@@ -23,6 +23,12 @@ export async function GET(req: NextRequest) {
         kycStatus: true,
         isCreator: true,
         hourlyRate: true,
+        _count: {
+          select: {
+            subscriptions: true,
+            receivedMessages: true,
+          },
+        },
       },
     })
 

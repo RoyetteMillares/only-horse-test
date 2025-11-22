@@ -11,7 +11,8 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "verify:aws": "node scripts/verify-aws-setup.js"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

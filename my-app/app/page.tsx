@@ -34,8 +34,8 @@ export default function Home() {
         ) : session?.user ? (
           <div className="space-y-3">
             <Button onClick={() => router.push('/dashboard')} size="lg" className="w-full">
-              Go to Dashboard
-            </Button>
+            Go to Dashboard
+          </Button>
             <SignOutButton variant="outline" size="lg" className="w-full" />
           </div>
         ) : (

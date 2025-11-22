@@ -22,6 +22,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Check if AWS is properly configured
+    if (!process.env.AWS_S3_BUCKET || 
+        process.env.AWS_S3_BUCKET === 'your-bucket-name' ||
+        !process.env.AWS_ACCESS_KEY_ID ||
+        process.env.AWS_ACCESS_KEY_ID === 'your-aws-access-key') {
+      return NextResponse.json(
+        { error: 'AWS S3 is not configured. Please set up AWS credentials in your .env file.' },
+        { status: 503 }
+      )
+    }
+
     // Generate upload URL
     const { uploadUrl, fileKey } = await getUploadUrl(
       session.user.id,

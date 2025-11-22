@@ -54,6 +54,10 @@ export function DashboardHeader() {
                         src={session.user.image}
                         alt={session.user.name || 'Profile'}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error('roy: Header image load error')
+                          e.currentTarget.style.display = 'none'
+                        }}
                       />
                     </div>
                   )}

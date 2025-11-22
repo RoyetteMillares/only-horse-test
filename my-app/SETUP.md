@@ -92,6 +92,114 @@ FACEBOOK_CLIENT_ID="your-facebook-app-id"
 FACEBOOK_CLIENT_SECRET="your-facebook-app-secret"
 ```
 
+#### AWS S3 Configuration (Required for File Uploads)
+
+**Setup AWS S3:**
+
+1. **Create S3 Bucket:**
+   - Go to https://console.aws.amazon.com/s3/
+   - Click "Create bucket"
+   - Choose a unique bucket name (e.g., `your-app-images`)
+   - Select region (e.g., `us-east-1`)
+   - **Uncheck "Block all public access"** (or configure public read access for images)
+   - Click "Create bucket"
+
+2. **Configure CORS (Critical for Browser Uploads):**
+   - In your S3 bucket, go to **Permissions** tab
+   - Scroll to **Cross-origin resource sharing (CORS)**
+   - Click **Edit** and paste the following configuration:
+
+```json
+[
+  {
+    "AllowedHeaders": [
+      "*"
+    ],
+    "AllowedMethods": [
+      "GET",
+      "PUT",
+      "POST",
+      "HEAD"
+    ],
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "https://your-production-domain.com"
+    ],
+    "ExposeHeaders": [
+      "ETag",
+      "x-amz-server-side-encryption",
+      "x-amz-request-id",
+      "x-amz-id-2"
+    ],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
+
+   **Important:** Replace `https://your-production-domain.com` with your actual production domain.
+
+3. **Create IAM User for S3 Access:**
+   - Go to https://console.aws.amazon.com/iam/
+   - Click "Users" → "Create user"
+   - Username: `s3-upload-user` (or your choice)
+   - Select "Application running outside AWS"
+   - Click "Next"
+   - Click "Create policy" (opens new tab)
+   - Use JSON editor and paste:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": "arn:aws:s3:::YOUR-BUCKET-NAME/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket"
+      ],
+      "Resource": "arn:aws:s3:::YOUR-BUCKET-NAME"
+    }
+  ]
+}
+```
+
+   - Replace `YOUR-BUCKET-NAME` with your actual bucket name
+   - Name the policy: `S3UploadPolicy`
+   - Click "Create policy"
+   - Go back to user creation tab, refresh, select `S3UploadPolicy`
+   - Click "Next" → "Create user"
+   - Click on the user → "Security credentials" tab
+   - Click "Create access key"
+   - Select "Application running outside AWS"
+   - Click "Next" → "Create access key"
+   - **Copy Access Key ID and Secret Access Key immediately** (secret is shown only once)
+
+4. **Update Environment Variables:**
+
+```env
+AWS_ACCESS_KEY_ID="your-access-key-id"
+AWS_SECRET_ACCESS_KEY="your-secret-access-key"
+AWS_S3_BUCKET="your-bucket-name"
+AWS_S3_REGION="us-east-1"
+```
+
+**Troubleshooting CORS Errors:**
+
+If you see `Access-Control-Allow-Origin` errors:
+- Verify CORS configuration in S3 bucket Permissions tab
+- Ensure your origin (localhost:3000 or production domain) is in `AllowedOrigins`
+- Check that `PUT` method is in `AllowedMethods`
+- Clear browser cache and try again
+- Verify bucket name and region match your `.env` file
+
 ## Running the Application
 
 ```bash

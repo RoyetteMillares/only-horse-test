@@ -18,7 +18,7 @@ export default function DashboardPage() {
       if (session.user.role === 'CREATOR') {
         router.push('/dashboard/creator/profile')
       } else {
-        router.push('/dashboard/subscriber/browse')
+        router.push('/dashboard/subscriber/feed')
       }
     }
   }, [session, status, router])

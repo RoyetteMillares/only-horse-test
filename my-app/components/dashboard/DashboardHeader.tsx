@@ -39,12 +39,20 @@ export function DashboardHeader() {
                     </Button>
                   </Link>
                 ) : (
-                  <Link href="/dashboard/subscriber/browse">
-                    <Button variant="ghost" size="sm">
-                      <User className="mr-2 h-4 w-4" />
-                      Browse
-                    </Button>
-                  </Link>
+                  <>
+                    <Link href="/dashboard/subscriber/feed">
+                      <Button variant="ghost" size="sm">
+                        <Home className="mr-2 h-4 w-4" />
+                        Feed
+                      </Button>
+                    </Link>
+                    <Link href="/dashboard/subscriber/browse">
+                      <Button variant="ghost" size="sm">
+                        <User className="mr-2 h-4 w-4" />
+                        Browse
+                      </Button>
+                    </Link>
+                  </>
                 )}
 
                 <div className="flex items-center space-x-2 border-l border-gray-200 pl-4">

@@ -65,7 +65,7 @@ async function handleSubscriptionCancelled(subscription: Stripe.Subscription) {
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  // Record earning
+  // Record earning and update subscription renewal date
   const invoiceData = invoice as any
   const subscriptionId = typeof invoiceData.subscription === 'string' 
     ? invoiceData.subscription 
@@ -78,14 +78,31 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   })
 
   if (subscription) {
+    // Update subscription renewal date
+    const currentPeriodEnd = invoiceData.period_end
+      ? new Date(invoiceData.period_end * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+
+    await db.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: 'ACTIVE',
+        renewsAt: currentPeriodEnd,
+      },
+    })
+
+    // Record creator earning (85% to creator, 15% platform fee)
     const chargeId = typeof invoiceData.charge === 'string' 
       ? invoiceData.charge 
       : invoiceData.charge?.id
 
+    const totalAmount = (invoice.total || 0) / 100
+    const creatorPayout = totalAmount * 0.85 // 85% to creator
+
     await db.earning.create({
       data: {
         creatorId: subscription.creatorId,
-        amount: (invoice.total || 0) / 100 * 0.8, // 80% to creator
+        amount: creatorPayout,
         source: "SUBSCRIPTION",
         stripeChargeId: chargeId || null,
       },

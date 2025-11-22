@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/app/api/auth/[...nextauth]/route'
 import { db } from '@/lib/db'
-import { sendKycSubmittedEmail } from '@/lib/email'
+import { sendKycSubmittedEmail } from '@/lib/emails'
 import { constructS3Url } from '@/lib/s3'
 
 export async function POST(req: NextRequest) {
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       lastName,
       dateOfBirth,
       idType,
+      governmentIdNumber,
       governmentIdKey,
       livelinessKey,
     } = await req.json()
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest) {
       !lastName ||
       !dateOfBirth ||
       !idType ||
+      !governmentIdNumber ||
       !governmentIdKey ||
       !livelinessKey
     ) {
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest) {
         lastName,
         dateOfBirth: new Date(dateOfBirth),
         governmentIdType: idType,
+        governmentIdNumber: governmentIdNumber.trim(),
         governmentIdImageUrl: constructS3Url(governmentIdKey),
         livelinessImageUrl: constructS3Url(livelinessKey),
         status: 'PENDING',

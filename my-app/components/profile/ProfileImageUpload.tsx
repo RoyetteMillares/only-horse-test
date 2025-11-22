@@ -114,12 +114,41 @@ export function ProfileImageUpload({
         console.log('roy: Dev upload successful!')
       }
 
+      // Update database with new image URL
+      try {
+        const updateResponse = await fetch('/api/users/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profileImage: imageUrl }),
+        })
+
+        if (!updateResponse.ok) {
+          throw new Error('Failed to update profile image in database')
+        }
+
+        console.log('roy: Profile image URL updated in database')
+      } catch (dbError) {
+        console.error('roy: Failed to update database:', dbError)
+        throw new Error('Image uploaded but failed to update profile. Please refresh the page.')
+      }
+
       // Update preview with actual URL
       setPreview(imageUrl)
       onImageUpdate?.(imageUrl)
       
-      // Refresh session to update header image
-      await updateSession()
+      // Small delay to ensure S3 file is accessible and database is committed
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Refresh session to update header image automatically
+      // This triggers JWT callback with trigger='update' which fetches fresh data from DB
+      // — Royette
+      try {
+        await updateSession()
+        console.log('roy: Session refreshed - header image should update automatically')
+      } catch (sessionError) {
+        console.error('roy: Error refreshing session:', sessionError)
+        // Don't throw - image is uploaded successfully, user can refresh manually
+      }
     } catch (error: any) {
       console.error('roy: Upload error:', error)
       alert(error.message || 'Failed to upload image. Please check console for details.')

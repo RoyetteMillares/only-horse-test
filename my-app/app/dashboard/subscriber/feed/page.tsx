@@ -6,8 +6,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { Heart, MessageCircle, Share2, Lock, MoreHorizontal, ChevronDown } from 'lucide-react'
+import { Heart, MessageCircle, Share2, Lock, MoreHorizontal, ImageIcon, Video, DollarSign, Type } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { FeedSidebar } from '@/components/feed/FeedSidebar'
+import { FeedRightSidebar } from '@/components/feed/FeedRightSidebar'
+import { PostCreation } from '@/components/posts/PostCreation'
 
 interface Post {
   id: string
@@ -58,6 +61,7 @@ export default function FeedPage() {
       fetchCreators()
     }
   }, [session])
+
 
   const fetchFeed = async () => {
     try {
@@ -133,6 +137,10 @@ export default function FeedPage() {
   }
 
   const isSubscribed = (creatorId: string) => {
+    // Creators can always view their own posts
+    if (session?.user?.role === 'CREATOR' && session.user.id === creatorId) {
+      return true
+    }
     return subscriptions.some(
       (sub) => sub.creatorId === creatorId && sub.status === 'ACTIVE'
     )
@@ -151,132 +159,60 @@ export default function FeedPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-6">
-              <Link href="/dashboard" className="text-2xl font-bold text-purple-600">
-                MuseDate
-              </Link>
-              
-              {/* Tabs */}
-              <div className="flex space-x-1">
-                <button
-                  onClick={() => setActiveTab('feed')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'feed'
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Feed
-                </button>
-                <button
-                  onClick={() => setActiveTab('bookings')}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    activeTab === 'bookings'
-                      ? 'bg-gray-100 text-gray-900'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  My Bookings
-                </button>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Left Sidebar */}
+      <FeedSidebar />
 
-            {/* User Profile */}
-            {session?.user && (
-              <div className="flex items-center space-x-3">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900">
-                    {session.user.name || 'User'}
-                  </div>
-                  <div className="text-xs text-gray-500">Fan Account</div>
-                </div>
-                {session.user.image ? (
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-gray-300">
-                    {session.user.image.startsWith('/') ? (
-                      <Image
-                        src={session.user.image}
-                        alt={session.user.name || 'Profile'}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <img
-                        src={session.user.image}
-                        alt={session.user.name || 'Profile'}
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                    <span className="text-gray-600 font-medium">
-                      {session.user.name?.charAt(0).toUpperCase() || 'U'}
-                    </span>
-                  </div>
-                )}
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* Center Content */}
+      <main className="flex-1 ml-64 mr-80 bg-white min-h-screen">
+        {/* Header */}
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900">HOME</h1>
+        </header>
 
-      {/* Main Content */}
-      <main className="max-w-2xl mx-auto px-4 py-6">
+        {/* Content Area */}
+        <div className="max-w-2xl mx-auto px-6 py-6">
         {activeTab === 'feed' ? (
           <div className="space-y-6">
-            {/* Creator Avatars Row */}
-            {creators.length > 0 && (
-              <div className="flex space-x-4 overflow-x-auto pb-4 -mx-4 px-4">
-                {creators.map((creator) => (
-                  <Link
-                    key={creator.id}
-                    href={`/dashboard/subscriber/creator/${creator.id}`}
-                    className="flex flex-col items-center space-y-2 flex-shrink-0"
-                  >
-                    {creator.image ? (
-                      <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-gray-300">
-                        {creator.image.startsWith('/') ? (
-                          <Image
-                            src={creator.image}
-                            alt={creator.name || 'Creator'}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <img
-                            src={creator.image}
-                            alt={creator.name || 'Creator'}
-                            className="w-full h-full object-cover"
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center border-2 border-gray-300">
-                        <span className="text-gray-600 font-medium text-lg">
-                          {creator.name?.charAt(0).toUpperCase() || '?'}
-                        </span>
-                      </div>
-                    )}
-                    <span className="text-xs text-gray-600 text-center max-w-[64px] truncate">
-                      {creator.name || 'Creator'}
-                    </span>
-                  </Link>
-                ))}
-                {/* Placeholder users */}
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={`placeholder-${i}`} className="flex flex-col items-center space-y-2 flex-shrink-0">
-                    <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
-                      <span className="text-gray-400 text-xs">User {i + 1}</span>
-                    </div>
-                    <span className="text-xs text-gray-400">User {i + 1}</span>
+            {/* Compose New Post Section */}
+            {session?.user?.role === 'CREATOR' && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+                <PostCreation onPostCreated={() => {
+                  fetchFeed()
+                  setActiveTab('feed')
+                }} />
+              </div>
+            )}
+
+            {/* Alternative Compose Section for Non-Creators */}
+            {session?.user?.role !== 'CREATOR' && (
+              <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+                <textarea
+                  placeholder="Compose new post..."
+                  className="w-full min-h-[100px] p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  readOnly
+                />
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center space-x-3">
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <ImageIcon className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <Video className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <DollarSign className="w-5 h-5 text-gray-600" />
+                    </button>
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <Type className="w-5 h-5 text-gray-600" />
+                    </button>
                   </div>
-                ))}
+                  <div className="flex items-center space-x-2">
+                    <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                      All
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -288,20 +224,22 @@ export default function FeedPage() {
             ) : (
               posts.map((post) => {
                 const subscribed = isSubscribed(post.creatorId)
-                const canView = !post.isSubscriberOnly || subscribed
+                const isOwnPost = session?.user?.role === 'CREATOR' && session.user.id === post.creatorId
+                const canView = !post.isSubscriberOnly || subscribed || isOwnPost
 
                 return (
-                  <Card key={post.id} className="bg-white border border-gray-200 shadow-sm">
+                  <Card key={post.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6">
                     {/* Post Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between p-4">
                       <div className="flex items-center space-x-3">
                         {post.creatorImage ? (
-                          <div className="relative w-10 h-10 rounded-full overflow-hidden">
+                          <div className="relative w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
                             {post.creatorImage.startsWith('/') ? (
                               <Image
                                 src={post.creatorImage}
                                 alt={post.creatorName}
-                                fill
+                                width={48}
+                                height={48}
                                 className="object-cover"
                               />
                             ) : (
@@ -313,114 +251,189 @@ export default function FeedPage() {
                             )}
                           </div>
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <span className="text-gray-600 font-medium">
+                          <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                            <span className="text-white font-semibold text-lg">
                               {post.creatorName.charAt(0).toUpperCase()}
                             </span>
                           </div>
                         )}
                         <div>
-                          <div className="font-semibold text-gray-900">{post.creatorName}</div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(post.createdAt).toLocaleDateString('en-US', {
-                              month: '2-digit',
-                              day: '2-digit',
-                              year: 'numeric',
-                            })}
+                          <div className="flex items-center space-x-2">
+                            <span className="font-semibold text-gray-900">{post.creatorName}</span>
+                            {post.isSubscriberOnly && (
+                              <span className="px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded">
+                                Subscriber Only
+                              </span>
+                            )}
+                            {!post.isSubscriberOnly && (
+                              <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded">
+                                Free
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            @{post.creatorName.toLowerCase().replace(/\s+/g, '_')} • {formatTimeAgo(post.createdAt)}
                           </div>
                         </div>
                       </div>
-                      <button className="p-1 hover:bg-gray-100 rounded-full">
+                      <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <MoreHorizontal className="w-5 h-5 text-gray-600" />
                       </button>
                     </div>
 
-                    {/* Post Content */}
+                    {/* Post Content/Caption */}
+                    {post.content && (
+                      <div className="px-4 pb-3">
+                        {canView || isOwnPost ? (
+                          <p className="text-gray-900 leading-relaxed whitespace-pre-wrap">
+                            {post.content}
+                          </p>
+                        ) : (
+                          <p className="text-gray-500 leading-relaxed whitespace-pre-wrap italic">
+                            {post.content.length > 100 
+                              ? post.content.substring(0, 100) + '...'
+                              : post.content}
+                            <span className="block mt-2 text-sm text-gray-400">
+                              Subscribe to unlock full content
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Post Media */}
                     <div className="relative">
-                      {post.imageUrl && canView ? (
-                        <div className="relative w-full aspect-square bg-gray-100">
-                          {post.imageUrl.startsWith('/') ? (
-                            <Image
-                              src={post.imageUrl}
-                              alt={post.content}
-                              fill
-                              className="object-cover"
-                            />
-                          ) : (
-                            <img
-                              src={post.imageUrl}
-                              alt={post.content}
-                              className="w-full h-full object-cover"
-                            />
+                      {/* Show media with blur/overlay if locked */}
+                      {(post.imageUrl || post.videoUrl) && !canView && !isOwnPost ? (
+                        <div className="relative w-full aspect-[4/3] bg-gray-900 overflow-hidden">
+                          {/* Blurred media preview */}
+                          {post.imageUrl && (
+                            <div className="relative w-full h-full blur-md scale-110 opacity-50">
+                              {post.imageUrl.startsWith('/') ? (
+                                <Image
+                                  src={post.imageUrl}
+                                  alt={post.content}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <img
+                                  src={post.imageUrl}
+                                  alt={post.content}
+                                  className="w-full h-full object-cover"
+                                />
+                              )}
+                            </div>
                           )}
-                        </div>
-                      ) : post.videoUrl && canView ? (
-                        <div className="relative w-full aspect-video bg-black">
-                          <div className="absolute inset-0 flex items-center justify-center text-white">
-                            <div className="text-center">
-                              <div className="text-sm mb-2">Video Player Placeholder</div>
+                          {post.videoUrl && !post.imageUrl && (
+                            <div className="relative w-full h-full blur-md scale-110 opacity-50 bg-gray-800" />
+                          )}
+                          
+                          {/* Lock overlay - OnlyFans style */}
+                          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex flex-col items-center justify-center p-8">
+                            <div className="bg-white/5 backdrop-blur-md rounded-2xl p-10 max-w-md w-full border border-white/10 shadow-2xl">
+                              <div className="flex flex-col items-center text-center">
+                                <Lock className="w-16 h-16 text-blue-400 mb-6" />
+                                <div className="text-white text-2xl font-bold mb-4">
+                                  Subscriber Only
+                                </div>
+                                <p className="text-white/90 text-center mb-8 text-base leading-relaxed px-4">
+                                  Subscribe to {post.creatorName} to unlock this post and view exclusive content.
+                                </p>
+                                <Button
+                                  onClick={() => handleSubscribe(post.creatorId)}
+                                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-base font-semibold rounded-lg transition-colors shadow-lg"
+                                >
+                                  Subscribe for ${getCreatorPrice(post.creatorId).toFixed(2)}/mo
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      ) : (
-                        <div className="relative w-full aspect-square bg-gray-900">
-                          {!canView && (
-                            <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center p-8">
-                              <Lock className="w-12 h-12 text-white mb-4" />
-                              <div className="text-white text-xl font-semibold mb-2">
-                                Subscriber Only
-                              </div>
-                              <p className="text-white/80 text-center mb-6 max-w-sm">
-                                Subscribe to {post.creatorName} to unlock this post and view exclusive content.
-                              </p>
-                              <Button
-                                onClick={() => handleSubscribe(post.creatorId)}
-                                className="bg-purple-600 hover:bg-purple-700 text-white"
-                              >
-                                Subscribe for ${getCreatorPrice(post.creatorId).toFixed(2)}/mo
-                              </Button>
-                            </div>
-                          )}
+                      ) : post.imageUrl && (canView || isOwnPost) ? (
+                        <div className="relative w-full bg-black">
+                          <div className="relative aspect-[4/3] bg-gray-900">
+                            {post.imageUrl.startsWith('/') ? (
+                              <Image
+                                src={post.imageUrl}
+                                alt={post.content}
+                                fill
+                                className="object-contain"
+                              />
+                            ) : (
+                              <img
+                                src={post.imageUrl}
+                                alt={post.content}
+                                className="w-full h-full object-contain"
+                              />
+                            )}
+                          </div>
                         </div>
-                      )}
+                      ) : post.videoUrl && (canView || isOwnPost) ? (
+                        <div className="relative w-full bg-black">
+                          <div className="relative aspect-video bg-black">
+                            <video
+                              src={post.videoUrl}
+                              controls
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
 
                     {/* Engagement Bar */}
-                    <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                      <div className="flex items-center space-x-4">
-                        <button className="flex items-center space-x-2 hover:opacity-70">
-                          <Heart className="w-6 h-6 text-gray-600" />
-                          <span className="text-sm font-medium text-gray-900">{post.likes}</span>
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                      <div className="flex items-center space-x-6">
+                        <button className="flex items-center space-x-2 hover:opacity-70 transition-opacity">
+                          <Heart className="w-5 h-5 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-700">{post.likes}</span>
                         </button>
-                        <button className="flex items-center space-x-2 hover:opacity-70">
-                          <MessageCircle className="w-6 h-6 text-gray-600" />
-                          <span className="text-sm font-medium text-gray-900">{post.comments}</span>
+                        <button className="flex items-center space-x-2 hover:opacity-70 transition-opacity">
+                          <MessageCircle className="w-5 h-5 text-gray-600" />
+                          <span className="text-sm font-medium text-gray-700">{post.comments}</span>
                         </button>
                       </div>
-                      <button className="hover:opacity-70">
-                        <Share2 className="w-6 h-6 text-gray-600" />
+                      <button className="hover:opacity-70 transition-opacity">
+                        <Share2 className="w-5 h-5 text-gray-600" />
                       </button>
-                    </div>
-
-                    {/* Caption */}
-                    <div className="p-4">
-                      <p className="text-gray-900">
-                        <span className="font-semibold mr-2">{post.creatorName}</span>
-                        {canView ? post.content : 'Exclusive content - Subscribe to view'}
-                      </p>
                     </div>
                   </Card>
                 )
               })
             )}
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-600">My Bookings page coming soon...</p>
-          </div>
-        )}
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-600">My Bookings page coming soon...</p>
+            </div>
+          )}
+        </div>
       </main>
+
+      {/* Right Sidebar */}
+      <FeedRightSidebar creators={creators} />
     </div>
   )
+}
+
+// Helper function to format time ago
+function formatTimeAgo(dateString: string): string {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  
+  if (diffInSeconds < 60) {
+    return 'just now'
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60)
+    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'} ago`
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600)
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`
+  } else {
+    const days = Math.floor(diffInSeconds / 86400)
+    return `${days} ${days === 1 ? 'day' : 'days'} ago`
+  }
 }
 

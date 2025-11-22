@@ -50,8 +50,8 @@ export function SignOutButton({
       disabled={isLoading}
       className={className}
     >
-      {showIcon && <LogOut className="mr-2 h-4 w-4" />}
-      {isLoading ? 'Signing out...' : 'Sign Out'}
+      {showIcon && <LogOut className="h-5 w-5" />}
+      <span className="font-medium">{isLoading ? 'Signing out...' : 'Log Out'}</span>
     </Button>
   )
 }

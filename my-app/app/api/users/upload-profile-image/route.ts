@@ -40,16 +40,14 @@ export async function POST(req: NextRequest) {
       'profile'
     )
 
-    // Update user's profile image URL in database
+    // Construct the public URL for the image
+    // Note: This assumes the bucket allows public read access
+    // If not, you'll need to configure bucket permissions or use presigned URLs
+    // — Royette
     const imageUrl = constructS3Url(fileKey)
-    await db.user.update({
-      where: { id: session.user.id },
-      data: {
-        profileImage: imageUrl,
-        image: imageUrl, // Also update the main image field for NextAuth compatibility
-      },
-    })
 
+    // Return upload URL and image URL
+    // Don't update database yet - let the client update after successful upload
     return NextResponse.json({
       uploadUrl,
       imageUrl,

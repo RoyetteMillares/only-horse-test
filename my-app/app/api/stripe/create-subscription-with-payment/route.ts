@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server"
-import { auth } from "@/app/api/auth/[...nextauth]/route"
-import { db } from "@/lib/db"
-import { stripe } from "@/lib/stripe"
+import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/app/api/auth/[...nextauth]/route'
+import { db } from '@/lib/db'
+import { stripe } from '@/lib/stripe'
 
 const PRICING = {
   BASIC: 499,    // $4.99
@@ -9,15 +9,24 @@ const PRICING = {
   VIP: 2499,     // $24.99
 }
 
+// Create subscription after payment method is attached
+// — Royette
 export async function POST(req: NextRequest) {
   try {
     const session = await auth()
 
     if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { creatorId, tier } = await req.json()
+    const { creatorId, tier, setupIntentId } = await req.json()
+
+    if (!creatorId || !tier || !setupIntentId) {
+      return NextResponse.json(
+        { error: 'Missing required fields: creatorId, tier, setupIntentId' },
+        { status: 400 }
+      )
+    }
 
     // Get subscriber and creator
     const subscriber = await db.user.findUnique({
@@ -29,34 +38,11 @@ export async function POST(req: NextRequest) {
     })
 
     if (!subscriber || !creator) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    // Check verification status - subscribers must be verified to subscribe
-    // — Royette
-    if (subscriber.kycStatus !== 'VERIFIED') {
-      return NextResponse.json(
-        {
-          error: 'Account verification required. Please complete verification to subscribe.',
-          requiresVerification: true,
-        },
-        { status: 403 }
-      )
-    }
-
-    // Creators must be verified to receive subscriptions
-    if (creator.kycStatus !== 'VERIFIED') {
-      return NextResponse.json(
-        {
-          error: 'This creator account is not verified yet.',
-        },
-        { status: 403 }
-      )
-    }
-
-    // Create or get Stripe customer
+    // Get or create Stripe customer
     let customerId = subscriber.stripeCustomerId
-
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: subscriber.email!,
@@ -70,6 +56,28 @@ export async function POST(req: NextRequest) {
         data: { stripeCustomerId: customerId },
       })
     }
+
+    // Retrieve SetupIntent to get payment method
+    const setupIntent = await stripe.setupIntents.retrieve(setupIntentId)
+    const paymentMethodId = setupIntent.payment_method as string
+
+    if (!paymentMethodId) {
+      return NextResponse.json(
+        { error: 'Payment method not found in setup intent' },
+        { status: 400 }
+      )
+    }
+
+    // Attach payment method to customer and set as default
+    await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: customerId,
+    })
+
+    await stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    })
 
     // Check if subscription already exists
     const existingSubscription = await db.subscription.findFirst({
@@ -87,47 +95,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Get or create payment method
-    // First check if customer has a default payment method
-    const customer = await stripe.customers.retrieve(customerId)
-    let defaultPaymentMethodId = (customer as any).invoice_settings?.default_payment_method
-
-    // If no default payment method, require SetupIntent
-    if (!defaultPaymentMethodId) {
-      // Create SetupIntent for payment method collection
-      const setupIntent = await stripe.setupIntents.create({
-        customer: customerId,
-        payment_method_types: ['card'],
-        metadata: {
-          subscriberId: subscriber.id,
-          creatorId: creator.id,
-          tier,
-        },
-      })
-
-      return NextResponse.json({
-        requiresPaymentMethod: true,
-        setupIntentClientSecret: setupIntent.client_secret,
-        customerId,
-      })
-    }
-
-    // Create subscription with existing payment method
+    // Create subscription with payment method
     const stripeSubscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [
         {
           price_data: {
-            currency: "usd",
+            currency: 'usd',
             product: `${creator.name || 'Creator'} - ${tier} Tier`,
             recurring: {
-              interval: "month",
+              interval: 'month',
             },
             unit_amount: PRICING[tier as keyof typeof PRICING],
           },
         },
       ],
-      default_payment_method: defaultPaymentMethodId,
+      default_payment_method: paymentMethodId,
       metadata: {
         creatorId,
         subscriberId: subscriber.id,
@@ -135,7 +118,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Calculate renewal date (30 days from now)
+    // Calculate renewal date
     const currentPeriodEnd = stripeSubscription.current_period_end
       ? new Date(stripeSubscription.current_period_end * 1000)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -147,19 +130,20 @@ export async function POST(req: NextRequest) {
         creatorId,
         tier: tier as any,
         stripeSubscriptionId: stripeSubscription.id,
-        status: "ACTIVE",
+        status: 'ACTIVE',
         price: PRICING[tier as keyof typeof PRICING] / 100,
-        billingCycle: "MONTHLY",
+        billingCycle: 'MONTHLY',
         renewsAt: currentPeriodEnd,
       },
     })
 
     return NextResponse.json({ subscription })
   } catch (error: any) {
-    console.error("Subscription error:", error)
+    console.error('roy: Error creating subscription with payment:', error)
     return NextResponse.json(
-      { error: error.message || "Failed to create subscription" },
+      { error: error.message || 'Failed to create subscription' },
       { status: 500 }
     )
   }
 }
+

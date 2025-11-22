@@ -9,6 +9,7 @@ import { ProfileImageUpload } from '@/components/profile/ProfileImageUpload'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Edit2, Users, MessageCircle, DollarSign, CheckCircle2, Clock, Camera } from 'lucide-react'
 import Image from 'next/image'
+import { PostCreation } from '@/components/posts/PostCreation'
 
 export default function CreatorProfilePage() {
   const { data: session } = useSession()
@@ -21,6 +22,7 @@ export default function CreatorProfilePage() {
     hourlyRate: 0,
     profileImage: '',
   })
+  const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -80,8 +82,8 @@ export default function CreatorProfilePage() {
 
   if (!profile) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0f0f23]">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-gray-600 text-xl">Loading...</div>
       </div>
     )
   }
@@ -89,122 +91,177 @@ export default function CreatorProfilePage() {
   const profileImage = profile.profileImage || profile.image
 
   return (
-    <div className="min-h-screen bg-[#0f0f23]">
+    <div className="min-h-screen bg-gray-50">
       <DashboardHeader />
       
-      {/* Cover Image Section */}
-      <div className="relative h-64 md:h-80 bg-gradient-to-br from-purple-900 via-pink-900 to-blue-900 overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#0f0f23] to-transparent"></div>
+      {/* Cover Section */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+            {/* Profile Image */}
+            <div className="relative">
+              <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white shadow-lg">
+                {profileImage ? (
+                      profileImage.startsWith('/') ? (
+                        failedImageUrls.has(profileImage) ? (
+                          <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                            <span className="text-3xl md:text-4xl font-bold text-gray-600">
+                              {profile.name?.charAt(0).toUpperCase() || '?'}
+                            </span>
+                          </div>
+                        ) : (
+                          <Image
+                            src={profileImage}
+                            alt={profile.name || 'Profile'}
+                            fill
+                            className="object-cover"
+                            onError={(e) => {
+                              // Only log once to prevent infinite loop
+                              if (!failedImageUrls.has(profileImage)) {
+                                console.error('roy: Profile image load error for local path:', profileImage)
+                                setFailedImageUrls(prev => new Set(prev).add(profileImage))
+                              }
+                              e.currentTarget.onerror = null
+                              e.currentTarget.style.display = 'none'
+                            }}
+                            onLoad={() => {
+                              // Clear from failed list on successful load
+                              setFailedImageUrls(prev => {
+                                if (prev.has(profileImage)) {
+                                  const next = new Set(prev)
+                                  next.delete(profileImage)
+                                  return next
+                                }
+                                return prev
+                              })
+                            }}
+                          />
+                        )
+                      ) : failedImageUrls.has(profileImage) ? (
+                    // Show placeholder if image failed to load (prevents infinite loop)
+                    <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                      <span className="text-3xl md:text-4xl font-bold text-gray-600">
+                        {profile.name?.charAt(0).toUpperCase() || '?'}
+                      </span>
+                    </div>
+                  ) : (
+                    <img
+                      src={profileImage}
+                      alt={profile.name || 'Profile'}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Only log and track error once per URL to prevent infinite loop
+                        if (!failedImageUrls.has(profileImage)) {
+                          console.error('roy: Profile image load error for URL:', profileImage)
+                          console.error('roy: This usually means the S3 bucket does not allow public read access. See S3_PUBLIC_ACCESS_SETUP.md')
+                          setFailedImageUrls(prev => new Set(prev).add(profileImage))
+                        }
+                        // Stop trying to load this image
+                        e.currentTarget.onerror = null
+                        e.currentTarget.src = ''
+                      }}
+                      onLoad={() => {
+                        console.log('roy: Profile image loaded successfully')
+                        // Clear from failed list if it loads successfully
+                        setFailedImageUrls(prev => {
+                          if (prev.has(profileImage)) {
+                            const next = new Set(prev)
+                            next.delete(profileImage)
+                            return next
+                          }
+                          return prev
+                        })
+                      }}
+                    />
+                  )
+                ) : (
+                  <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                    <span className="text-3xl md:text-4xl font-bold text-gray-600">
+                      {profile.name?.charAt(0).toUpperCase() || '?'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              {/* Upload Button */}
+              <div className="absolute -bottom-1 -right-1">
+                <ProfileImageUpload
+                  currentImage={profileImage}
+                  onImageUpdate={(imageUrl) => {
+                    setFormData({ ...formData, profileImage: imageUrl })
+                    setProfile({ ...profile, profileImage: imageUrl, image: imageUrl })
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Profile Header Info */}
+            <div className="flex-1">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                      {profile.name || 'Creator'}
+                    </h1>
+                    {profile.kycStatus === 'VERIFIED' && (
+                      <CheckCircle2 className="w-6 h-6 text-green-500" />
+                    )}
+                  </div>
+                  <p className="text-gray-600 text-sm mb-2">
+                    {profile.bio || 'No bio added yet'}
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setIsEditing(!isEditing)}
+                  variant={isEditing ? 'outline' : 'default'}
+                  className="bg-purple-600 hover:bg-purple-700 text-white border-0"
+                >
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  {isEditing ? 'Cancel' : 'Edit Profile'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Profile Content */}
-      <div className="max-w-6xl mx-auto px-4 md:px-6 -mt-24 pb-12">
-        {/* Profile Header Card */}
-        <Card className="bg-[#1a1a2e] border-[#2d2d44] shadow-2xl">
+      <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+        {/* Post Creation - Only show when not editing */}
+        {!isEditing && (
+          <div className="mb-6">
+            <PostCreation
+              onPostCreated={() => {
+                // Optionally refresh posts list or show success message
+                console.log('roy: Post created successfully')
+              }}
+            />
+          </div>
+        )}
+
+        {/* Stats Card */}
+        <Card className="bg-white border border-gray-200 shadow-sm mb-6">
           <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-              {/* Profile Image */}
-              <div className="flex-shrink-0">
-                <div className="relative group">
-                  <div className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-[#0f0f23] shadow-xl">
-                    {profileImage ? (
-                      profileImage.startsWith('/') ? (
-                        <Image
-                          src={profileImage}
-                          alt={profile.name || 'Profile'}
-                          fill
-                          className="object-cover"
-                          onError={(e) => {
-                            console.error('roy: Profile image load error')
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      ) : (
-                        <img
-                          src={profileImage}
-                          alt={profile.name || 'Profile'}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.error('roy: Profile image load error')
-                            e.currentTarget.style.display = 'none'
-                          }}
-                        />
-                      )
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
-                        <span className="text-4xl md:text-5xl font-bold text-white">
-                          {profile.name?.charAt(0).toUpperCase() || '?'}
-                        </span>
-                      </div>
-                    )}
-                    {/* Overlay on hover */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center">
-                      <Camera className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                  {/* Upload Button - Always Visible */}
-                  <div className="absolute -bottom-2 -right-2">
-                    <ProfileImageUpload
-                      currentImage={profileImage}
-                      onImageUpdate={(imageUrl) => {
-                        setFormData({ ...formData, profileImage: imageUrl })
-                        setProfile({ ...profile, profileImage: imageUrl, image: imageUrl })
-                      }}
-                    />
-                  </div>
+            <div className="grid grid-cols-3 gap-6">
+              <div className="text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                  <Users className="w-5 h-5 text-purple-600" />
+                  <span className="text-2xl font-bold text-gray-900">{stats.subscribers}</span>
                 </div>
+                <p className="text-gray-600 text-sm">Subscribers</p>
               </div>
-
-              {/* Profile Info */}
-              <div className="flex-1">
-                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <h1 className="text-3xl md:text-4xl font-bold text-white">
-                        {profile.name || 'Creator'}
-                      </h1>
-                      {profile.kycStatus === 'VERIFIED' && (
-                        <CheckCircle2 className="w-6 h-6 text-green-400" />
-                      )}
-                    </div>
-                    <p className="text-gray-400 text-sm mb-4">
-                      {profile.bio || 'No bio added yet'}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => setIsEditing(!isEditing)}
-                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0"
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    {isEditing ? 'Cancel' : 'Edit Profile'}
-                  </Button>
+              <div className="text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                  <MessageCircle className="w-5 h-5 text-pink-600" />
+                  <span className="text-2xl font-bold text-gray-900">{stats.messages}</span>
                 </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-[#16213e] rounded-lg p-4 border border-[#2d2d44]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-5 h-5 text-purple-400" />
-                      <span className="text-2xl font-bold text-white">{stats.subscribers}</span>
-                    </div>
-                    <p className="text-gray-400 text-sm">Subscribers</p>
-                  </div>
-                  <div className="bg-[#16213e] rounded-lg p-4 border border-[#2d2d44]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MessageCircle className="w-5 h-5 text-pink-400" />
-                      <span className="text-2xl font-bold text-white">{stats.messages}</span>
-                    </div>
-                    <p className="text-gray-400 text-sm">Messages</p>
-                  </div>
-                  <div className="bg-[#16213e] rounded-lg p-4 border border-[#2d2d44]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="w-5 h-5 text-green-400" />
-                      <span className="text-2xl font-bold text-white">${profile.hourlyRate || 0}</span>
-                    </div>
-                    <p className="text-gray-400 text-sm">Monthly Rate</p>
-                  </div>
+                <p className="text-gray-600 text-sm">Messages</p>
+              </div>
+              <div className="text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+                  <DollarSign className="w-5 h-5 text-green-600" />
+                  <span className="text-2xl font-bold text-gray-900">${profile.hourlyRate || 0}</span>
                 </div>
+                <p className="text-gray-600 text-sm">Monthly Rate</p>
               </div>
             </div>
           </CardContent>
@@ -212,54 +269,54 @@ export default function CreatorProfilePage() {
 
         {/* Edit Form or Profile Details */}
         {isEditing ? (
-          <Card className="mt-6 bg-[#1a1a2e] border-[#2d2d44]">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-white">Edit Profile</CardTitle>
+              <CardTitle className="text-gray-900">Edit Profile</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Name</label>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Name</label>
                 <Input
                   type="text"
                   placeholder="Your name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-[#16213e] border-[#2d2d44] text-white placeholder:text-gray-500 focus:border-purple-500"
+                  className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                 />
               </div>
               
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Bio</label>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Bio</label>
                 <textarea
                   placeholder="Tell your subscribers about yourself..."
                   value={formData.bio}
                   onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  className="w-full min-h-[120px] px-4 py-3 bg-[#16213e] border border-[#2d2d44] rounded-md text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                  className="w-full min-h-[120px] px-4 py-3 border border-gray-300 rounded-md text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-300 text-sm font-medium mb-2">Monthly Subscription Rate ($)</label>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Monthly Subscription Rate ($)</label>
                 <Input
                   type="number"
                   placeholder="0.00"
                   value={formData.hourlyRate}
                   onChange={(e) => setFormData({ ...formData, hourlyRate: parseFloat(e.target.value) || 0 })}
-                  className="bg-[#16213e] border-[#2d2d44] text-white placeholder:text-gray-500 focus:border-purple-500"
+                  className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                 />
               </div>
 
               <div className="flex gap-4 pt-4">
                 <Button
                   onClick={handleSave}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0"
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   Save Changes
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setIsEditing(false)}
-                  className="border-[#2d2d44] text-gray-300 hover:bg-[#16213e]"
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </Button>
@@ -267,43 +324,43 @@ export default function CreatorProfilePage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="mt-6 bg-[#1a1a2e] border-[#2d2d44]">
+          <Card className="bg-white border border-gray-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-white">Profile Details</CardTitle>
+              <CardTitle className="text-gray-900">Profile Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div>
-                <p className="text-gray-400 text-sm mb-1">Name</p>
-                <p className="text-white text-lg font-semibold">{profile.name || 'Not set'}</p>
+                <p className="text-gray-600 text-sm mb-1">Name</p>
+                <p className="text-gray-900 text-lg font-semibold">{profile.name || 'Not set'}</p>
               </div>
               
               <div>
-                <p className="text-gray-400 text-sm mb-1">Bio</p>
-                <p className="text-white">{profile.bio || 'No bio added yet'}</p>
+                <p className="text-gray-600 text-sm mb-1">Bio</p>
+                <p className="text-gray-900">{profile.bio || 'No bio added yet'}</p>
               </div>
 
               <div>
-                <p className="text-gray-400 text-sm mb-1">Monthly Subscription Rate</p>
-                <p className="text-white text-2xl font-bold">${profile.hourlyRate || 0}/month</p>
+                <p className="text-gray-600 text-sm mb-1">Monthly Subscription Rate</p>
+                <p className="text-gray-900 text-2xl font-bold">${profile.hourlyRate || 0}/month</p>
               </div>
 
               <div>
-                <p className="text-gray-400 text-sm mb-1">KYC Verification Status</p>
+                <p className="text-gray-600 text-sm mb-1">KYC Verification Status</p>
                 <div className="flex items-center gap-2">
                   {profile.kycStatus === 'VERIFIED' ? (
                     <>
-                      <CheckCircle2 className="w-5 h-5 text-green-400" />
-                      <span className="text-green-400 font-semibold">Verified</span>
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      <span className="text-green-600 font-semibold">Verified</span>
                     </>
                   ) : profile.kycStatus === 'PENDING' ? (
                     <>
-                      <Clock className="w-5 h-5 text-yellow-400" />
-                      <span className="text-yellow-400 font-semibold">Pending Verification</span>
+                      <Clock className="w-5 h-5 text-yellow-500" />
+                      <span className="text-yellow-600 font-semibold">Pending Verification</span>
                     </>
                   ) : (
                     <>
                       <Clock className="w-5 h-5 text-gray-400" />
-                      <span className="text-gray-400 font-semibold">Not Verified</span>
+                      <span className="text-gray-600 font-semibold">Not Verified</span>
                     </>
                   )}
                 </div>

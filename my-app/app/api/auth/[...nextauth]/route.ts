@@ -60,7 +60,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }: any) {
+    async jwt({ token, user, account, trigger }: any) {
+      // Initial login - fetch user data
       if (user) {
         token.id = user.id
         token.email = user.email
@@ -68,13 +69,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Fetch user data from database
         const dbUser = await db.user.findUnique({
           where: { id: user.id },
-          select: { role: true, profileImage: true, image: true },
+          select: { role: true, profileImage: true, image: true, kycStatus: true, name: true },
         })
 
         if (dbUser) {
           token.role = dbUser.role
           token.needsSetup = !dbUser.role
           token.image = dbUser.profileImage || dbUser.image || user.image
+          token.kycStatus = dbUser.kycStatus || 'NOT_STARTED'
+          token.name = dbUser.name || user.name
+        }
+      }
+
+      // Refresh user data from database when session is explicitly updated
+      // This ensures the header and profile image updates automatically without page reload
+      // Only refresh when updateSession() is called (trigger === 'update')
+      // — Royette
+      if (token.id && trigger === 'update') {
+        try {
+          const dbUser = await db.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true, profileImage: true, image: true, name: true, kycStatus: true },
+          })
+
+          if (dbUser) {
+            token.role = dbUser.role
+            token.needsSetup = !dbUser.role
+            // Use profileImage first, fall back to image field
+            token.image = dbUser.profileImage || dbUser.image || token.image
+            token.name = dbUser.name || token.name
+            token.kycStatus = dbUser.kycStatus || 'NOT_STARTED'
+          }
+          console.log('roy: JWT callback refreshed user data from database')
+        } catch (error) {
+          // Silently fail - keep existing token data
+          console.error('roy: Error refreshing user data in JWT callback:', error)
         }
       }
 
@@ -86,6 +115,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = token.role
         session.user.needsSetup = token.needsSetup as boolean
         session.user.image = token.image as string | null
+        session.user.kycStatus = token.kycStatus as string || 'NOT_STARTED'
+        session.user.name = token.name as string | null
       }
       return session
     },

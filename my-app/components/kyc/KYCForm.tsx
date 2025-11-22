@@ -11,15 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Upload, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, CheckCircle, AlertCircle, Camera } from 'lucide-react'
+import { CameraCapture } from './CameraCapture'
 
-export function KYCForm() {
+export function KYCForm({ onSuccess }: { onSuccess?: () => void }) {
   const { data: session } = useSession()
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     dateOfBirth: '',
     idType: 'PASSPORT',
+    governmentIdNumber: '',
   })
 
   const [files, setFiles] = useState<{
@@ -30,6 +32,7 @@ export function KYCForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const [cameraMode, setCameraMode] = useState<'id' | 'selfie' | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -105,10 +108,20 @@ export function KYCForm() {
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to submit KYC')
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to submit KYC')
+      }
 
       setStatus('success')
       setMessage(`KYC submitted successfully! We'll verify within 24-48 hours.`)
+      
+      // Call success callback if provided
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess()
+        }, 1500)
+      }
     } catch (error: any) {
       setStatus('error')
       setMessage(error.message)
@@ -188,6 +201,16 @@ export function KYCForm() {
               </SelectContent>
             </Select>
           </div>
+
+          <Input
+            placeholder="Government ID Number"
+            value={formData.governmentIdNumber}
+            onChange={(e) =>
+              setFormData({ ...formData, governmentIdNumber: e.target.value })
+            }
+            className="mt-4"
+            required
+          />
         </div>
 
         {/* Documents */}
@@ -200,22 +223,36 @@ export function KYCForm() {
               <label className="block text-sm font-medium mb-2">
                 {formData.idType}
               </label>
-              <label className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition">
-                <input
-                  type="file"
-                  name="governmentId"
-                  accept="image/*,.pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  required
-                />
-                <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p className="text-sm">
-                  {files.governmentId
-                    ? files.governmentId.name
-                    : 'Click to upload government ID'}
-                </p>
-              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCameraMode('id')}
+                  className="flex items-center justify-center space-x-2 h-auto py-4 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50"
+                >
+                  <Camera className="w-5 h-5 text-gray-600" />
+                  <span className="text-sm">Open Camera</span>
+                </Button>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    name="governmentId"
+                    accept="image/*,.pdf"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <div className="flex items-center justify-center space-x-2 h-full py-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                    <Upload className="w-5 h-5 text-gray-600" />
+                    <span className="text-sm">Upload from Device</span>
+                  </div>
+                </label>
+              </div>
+              {files.governmentId && (
+                <div className="mt-2 flex items-center space-x-2 text-sm text-green-600">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>{files.governmentId.name}</span>
+                </div>
+              )}
             </div>
 
             {/* Selfie/Liveness */}
@@ -223,24 +260,56 @@ export function KYCForm() {
               <label className="block text-sm font-medium mb-2">
                 Selfie (Liveness Check)
               </label>
-              <label className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition">
-                <input
-                  type="file"
-                  name="liveness"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  required
-                />
-                <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                <p className="text-sm">
-                  {files.liveness
-                    ? files.liveness.name
-                    : 'Click to upload selfie'}
-                </p>
-              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCameraMode('selfie')}
+                  className="flex items-center justify-center space-x-2 h-auto py-4 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50"
+                >
+                  <Camera className="w-5 h-5 text-gray-600" />
+                  <span className="text-sm">Open Camera</span>
+                </Button>
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    name="liveness"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    capture="user"
+                    className="hidden"
+                  />
+                  <div className="flex items-center justify-center space-x-2 h-full py-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors">
+                    <Upload className="w-5 h-5 text-gray-600" />
+                    <span className="text-sm">Upload from Device</span>
+                  </div>
+                </label>
+              </div>
+              {files.liveness && (
+                <div className="mt-2 flex items-center space-x-2 text-sm text-green-600">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>{files.liveness.name}</span>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Camera Capture Modal */}
+          {cameraMode && (
+            <CameraCapture
+              label={cameraMode === 'id' ? `Government ID - ${formData.idType}` : 'Selfie (Liveness Check)'}
+              onCapture={(file) => {
+                if (cameraMode === 'id') {
+                  setFiles({ ...files, governmentId: file })
+                } else {
+                  setFiles({ ...files, liveness: file })
+                }
+                setCameraMode(null)
+              }}
+              onClose={() => setCameraMode(null)}
+              aspectRatio={cameraMode === 'id' ? 16 / 9 : 4 / 3}
+            />
+          )}
         </div>
 
         {/* Submit */}

@@ -3,18 +3,19 @@
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { 
-  Home, 
-  Bell, 
-  MessageCircle, 
-  Bookmark, 
-  User, 
-  CreditCard, 
-  Settings, 
+import {
+  Home,
+  Bell,
+  MessageCircle,
+  Bookmark,
+  User,
+  CreditCard,
+  Settings,
   MoreHorizontal,
   Plus,
   LogOut,
-  Calendar
+  Calendar,
+  LayoutDashboard
 } from 'lucide-react'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
@@ -26,15 +27,16 @@ export function FeedSidebar() {
   const router = useRouter()
 
   const menuItems = [
-    { icon: Home, label: 'Home', href: '/dashboard/subscriber/feed', active: pathname === '/dashboard/subscriber/feed' },
-    { icon: Bell, label: 'Notifications', href: '/dashboard/notifications' },
-    { icon: MessageCircle, label: 'Messages', href: '/dashboard/messages' },
-    { icon: Bookmark, label: 'Collections', href: '/dashboard/collections' },
-    { icon: User, label: 'Subscriptions', href: '/dashboard/subscriptions' },
-    { icon: Calendar, label: 'Bookings', href: '/dashboard/subscriber/bookings', active: pathname?.startsWith('/dashboard/subscriber/bookings') },
-    { icon: CreditCard, label: 'Add card', href: '/dashboard/payment' },
-    { icon: Settings, label: 'My profile', href: session?.user?.role === 'CREATOR' ? '/dashboard/creator/profile' : '/dashboard/settings' },
-    { icon: MoreHorizontal, label: 'More', href: '/dashboard/more' },
+    { icon: Home, label: 'Home', href: '/feed', active: pathname === '/feed' },
+    ...(session?.user?.role === 'CREATOR' ? [{ icon: LayoutDashboard, label: 'Dashboard', href: '/creator/dashboard' }] : []),
+    { icon: Bell, label: 'Notifications', href: '/notifications' },
+    { icon: MessageCircle, label: 'Messages', href: '/messages' },
+    { icon: Bookmark, label: 'Collections', href: '/collections' },
+    { icon: User, label: 'Subscriptions', href: '/subscriptions' },
+    { icon: Calendar, label: 'Bookings', href: '/bookings', active: pathname?.startsWith('/bookings') },
+    { icon: CreditCard, label: 'Add card', href: '/payment' },
+    { icon: Settings, label: 'My profile', href: session?.user?.role === 'CREATOR' ? '/creator/profile' : '/settings' },
+    { icon: MoreHorizontal, label: 'More', href: '/more' },
   ]
 
   const handleNewPost = () => {
@@ -84,16 +86,15 @@ export function FeedSidebar() {
           {menuItems.map((item) => {
             const Icon = item.icon
             const isActive = item.active
-            
+
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                 >
                   <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-gray-600'}`} />
                   <span className="font-medium">{item.label}</span>
@@ -115,11 +116,11 @@ export function FeedSidebar() {
             <span>+ NEW POST</span>
           </Button>
         )}
-        
+
         {/* Logout Button */}
         <div className="w-full">
-          <SignOutButton 
-            variant="ghost" 
+          <SignOutButton
+            variant="ghost"
             size="default"
             className="w-full flex items-center justify-start space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100"
             showIcon={true}

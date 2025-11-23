@@ -20,7 +20,7 @@ export default function DashboardPage() {
       } else if (session.user.role === 'CREATOR') {
         router.push('/dashboard/creator/profile')
       } else {
-        router.push('/dashboard/subscriber/feed')
+        router.push('/feed')
       }
     }
   }, [session, status, router])

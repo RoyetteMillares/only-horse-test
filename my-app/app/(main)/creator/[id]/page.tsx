@@ -147,8 +147,6 @@ export default function CreatorDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader />
-      
       {/* Hero Section */}
       <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 py-8">
@@ -208,45 +206,59 @@ export default function CreatorDetailPage({
               </div>
 
               {/* Hourly Rate Display */}
-              {creator.hourlyRate && creator.hourlyRate > 0 && (
-                <div className="mb-4">
-                  <div className="flex items-center space-x-2 text-lg">
-                    <span className="text-gray-600">Hourly Rate:</span>
-                    <span className="font-bold text-blue-600">
-                      ${creator.hourlyRate.toFixed(2)}/hour
-                    </span>
-                    {creator.minHours && (
-                      <span className="text-gray-500 text-sm">
-                        (Min: {creator.minHours} hours)
+              {
+                creator.hourlyRate && creator.hourlyRate > 0 && (
+                  <div className="mb-4">
+                    <div className="flex items-center space-x-2 text-lg">
+                      <span className="text-gray-600">Hourly Rate:</span>
+                      <span className="font-bold text-blue-600">
+                        ${creator.hourlyRate.toFixed(2)}/hour
                       </span>
+                      {creator.minHours && (
+                        <span className="text-gray-500 text-sm">
+                          (Min: {creator.minHours} hours)
+                        </span>
+                      )}
+                    </div>
+                    {creator.location && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        📍 Location: {creator.location}
+                      </p>
                     )}
                   </div>
-                  {creator.location && (
-                    <p className="text-sm text-gray-600 mt-1">
-                      📍 Location: {creator.location}
-                    </p>
-                  )}
-                </div>
-              )}
+                )
+              }
 
               {/* Action Buttons */}
               <div className="flex gap-3 flex-wrap">
-                {creator.hourlyRate && creator.hourlyRate > 0 && (
+                {session?.user?.id === creator.id ? (
                   <Button
                     size="lg"
-                    onClick={() => setShowBookingDialog(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => router.push('/creator/settings')}
+                    className="bg-gray-900 hover:bg-gray-800 text-white"
                   >
-                    <Calendar className="w-5 h-5 mr-2" />
-                    Request Booking
+                    Edit Profile
                   </Button>
+                ) : (
+                  <>
+                    {creator.hourlyRate && creator.hourlyRate > 0 && (
+                      <Button
+                        size="lg"
+                        onClick={() => setShowBookingDialog(true)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Calendar className="w-5 h-5 mr-2" />
+                        Request Booking
+                      </Button>
+                    )}
+                    <Button
+                      size="lg"
+                      onClick={() => setShowSubscribeDialog(true)}
+                    >
+                      Subscribe Now
+                    </Button>
+                  </>
                 )}
-                <Button
-                  size="lg"
-                  onClick={() => setShowSubscribeDialog(true)}
-                >
-                  Subscribe Now
-                </Button>
                 <Button variant="outline" size="lg">
                   <Heart className="w-5 h-5 mr-2" />
                   Save
@@ -255,29 +267,31 @@ export default function CreatorDetailPage({
                   <Share2 className="w-5 h-5" />
                 </Button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            </div >
+          </div >
+        </div >
+      </div >
 
       {/* Booking Request Dialog */}
-      {creator && creator.hourlyRate && creator.hourlyRate > 0 && (
-        <BookingRequestModal
-          open={showBookingDialog}
-          onOpenChange={setShowBookingDialog}
-          creator={{
-            id: creator.id,
-            name: creator.name,
-            hourlyRate: creator.hourlyRate,
-            minHours: creator.minHours || 2,
-            location: creator.location,
-            kycStatus: creator.kycStatus,
-          }}
-          onBookingCreated={() => {
-            setShowBookingDialog(false)
-          }}
-        />
-      )}
+      {
+        creator && creator.hourlyRate && creator.hourlyRate > 0 && (
+          <BookingRequestModal
+            open={showBookingDialog}
+            onOpenChange={setShowBookingDialog}
+            creator={{
+              id: creator.id,
+              name: creator.name,
+              hourlyRate: creator.hourlyRate,
+              minHours: creator.minHours || 2,
+              location: creator.location,
+              kycStatus: creator.kycStatus,
+            }}
+            onBookingCreated={() => {
+              setShowBookingDialog(false)
+            }}
+          />
+        )
+      }
 
       {/* Subscription Dialog */}
       <Dialog open={showSubscribeDialog} onOpenChange={setShowSubscribeDialog}>
@@ -294,11 +308,10 @@ export default function CreatorDetailPage({
               {Object.entries(PRICING).map(([tier, details]) => (
                 <label
                   key={tier}
-                  className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                    selectedTier === tier
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition ${selectedTier === tier
+                    ? 'border-blue-600 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -332,6 +345,6 @@ export default function CreatorDetailPage({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   )
 }

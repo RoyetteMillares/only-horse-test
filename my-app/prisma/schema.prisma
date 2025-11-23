@@ -72,6 +72,7 @@ model User {
   hourlyRate    Float?
   profileImage  String? @db.Text
   isCreator     Boolean @default(false)
+  isFeatured    Boolean @default(false) // Admin-controlled featured status
   minHours      Int     @default(2) // Minimum booking duration
   location      String? // Primary meeting city (e.g., "Tokyo")
   noGoZones     String? @db.Text // JSON list of prohibited areas

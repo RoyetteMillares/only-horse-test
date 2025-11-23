@@ -100,6 +100,31 @@ export default function StripeConnectPage() {
           </Button>
         </form>
 
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <Button
+              variant="outline"
+              className="w-full text-amber-600 border-amber-200 hover:bg-amber-50"
+              onClick={async () => {
+                try {
+                  setLoading(true)
+                  const res = await fetch('/api/stripe/dev-skip', { method: 'POST' })
+                  if (!res.ok) throw new Error('Failed to skip')
+                  router.push('/creator/dashboard')
+                } catch (err) {
+                  setError('Failed to skip in dev mode')
+                  setLoading(false)
+                }
+              }}
+            >
+              Skip (Dev Mode)
+            </Button>
+            <p className="text-xs text-amber-600/70 text-center mt-2">
+              Bypasses Stripe Connect for local testing
+            </p>
+          </div>
+        )}
+
         <p className="text-xs text-gray-500 text-center mt-6">
           You'll be redirected to Stripe to securely connect your account.
         </p>

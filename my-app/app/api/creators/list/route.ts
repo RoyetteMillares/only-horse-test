@@ -12,17 +12,18 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '12')
     const search = searchParams.get('search') || ''
     const sortBy = searchParams.get('sortBy') || 'newest'
+    const featuredOnly = searchParams.get('featured') === 'true'
 
     const skip = (page - 1) * limit
 
     // Build search filter
     const searchFilter = search
       ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { bio: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
+        OR: [
+          { name: { contains: search, mode: 'insensitive' as const } },
+          { bio: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }
       : {}
 
     // Build sort order
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
         isCreator: true,
         status: 'ACTIVE',
         kycStatus: 'VERIFIED',
+        ...(featuredOnly ? { isFeatured: true } : {}),
         ...searchFilter,
       },
       select: {
@@ -66,6 +68,7 @@ export async function GET(req: NextRequest) {
         isCreator: true,
         status: 'ACTIVE',
         kycStatus: 'VERIFIED',
+        ...(featuredOnly ? { isFeatured: true } : {}),
         ...searchFilter,
       },
     })

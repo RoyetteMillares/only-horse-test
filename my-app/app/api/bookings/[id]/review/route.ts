@@ -6,8 +6,9 @@ import { db } from '@/lib/db'
 // — Royette
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await auth()
 
@@ -150,8 +151,9 @@ export async function POST(
 // Get reviews for a booking
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
+  const params = await props.params;
   try {
     const session = await auth()
 

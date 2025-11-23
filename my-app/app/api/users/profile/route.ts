@@ -88,6 +88,7 @@ export async function PATCH(req: NextRequest) {
         name: name || undefined,
         bio: bio || undefined,
         role: role || undefined,
+        isCreator: role === 'CREATOR' ? true : (role === 'SUBSCRIBER' ? false : undefined),
         hourlyRate: hourlyRate || undefined,
         profileImage: profileImage || undefined,
         image: profileImage || undefined, // Also update image for NextAuth compatibility

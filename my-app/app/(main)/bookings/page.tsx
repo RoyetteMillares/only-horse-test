@@ -68,11 +68,11 @@ export default function ClientBookingsPage() {
       setLoading(true)
       const status = activeTab === 'pending' ? 'PENDING' : activeTab === 'approved' ? 'APPROVED' : 'COMPLETED'
       const response = await fetch(`/api/bookings/list?role=client&status=${status}`)
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch bookings')
       }
-      
+
       const data = await response.json()
       setBookings(data.bookings || [])
     } catch (error: any) {
@@ -154,31 +154,28 @@ export default function ClientBookingsPage() {
             <div className="flex space-x-4 border-b border-gray-200">
               <button
                 onClick={() => setActiveTab('pending')}
-                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-                  activeTab === 'pending'
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${activeTab === 'pending'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 Pending Requests
               </button>
               <button
                 onClick={() => setActiveTab('approved')}
-                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-                  activeTab === 'approved'
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${activeTab === 'approved'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 Approved
               </button>
               <button
                 onClick={() => setActiveTab('completed')}
-                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
-                  activeTab === 'completed'
+                className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${activeTab === 'completed'
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 Completed
               </button>
@@ -195,11 +192,19 @@ export default function ClientBookingsPage() {
                       <p className="text-gray-500 text-sm mt-2">
                         Your booking requests will appear here once you submit them.
                       </p>
-                      <Link href="/dashboard/subscriber/browse">
+                      <Link href="/browse">
                         <Button className="mt-4 bg-blue-600 hover:bg-blue-700 text-white">
-                          Browse Creators
+                          {session?.user?.role === 'CREATOR' ? 'Find Creators to Book' : 'Browse Creators'}
                         </Button>
                       </Link>
+                      {session?.user?.role === 'CREATOR' && (
+                        <p className="text-sm text-gray-500 mt-4">
+                          Looking for bookings you received?{' '}
+                          <Link href="/creator/bookings" className="text-blue-600 hover:underline">
+                            Go to Creator Dashboard
+                          </Link>
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 ) : (
@@ -347,7 +352,7 @@ export default function ClientBookingsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => router.push(`/dashboard/bookings/${booking.id}/chat`)}
+                            onClick={() => router.push(`/bookings/${booking.id}/chat`)}
                           >
                             <MessageCircle className="w-4 h-4 mr-2" />
                             Chat
@@ -450,7 +455,7 @@ export default function ClientBookingsPage() {
                               <p className="text-sm text-gray-500">Completed</p>
                             </div>
                           </div>
-                          <Link href={`/dashboard/subscriber/creator/${booking.creatorId}`}>
+                          <Link href={`/creator/${booking.creatorId}`}>
                             <Button variant="outline" size="sm">
                               <User className="w-4 h-4 mr-2" />
                               View Profile

@@ -27,7 +27,7 @@ export function SetupProfileForm() {
       if (role === "CREATOR") {
         router.push("/auth/stripe-connect")
       } else {
-        router.push("/dashboard/subscriber/browse")
+        router.push("/feed")
       }
     } catch (error: any) {
       alert(error.message)
@@ -43,11 +43,10 @@ export function SetupProfileForm() {
       <div className="space-y-4">
         <button
           onClick={() => setRole("SUBSCRIBER")}
-          className={`w-full p-4 border-2 rounded-lg text-left transition ${
-            role === "SUBSCRIBER"
+          className={`w-full p-4 border-2 rounded-lg text-left transition ${role === "SUBSCRIBER"
               ? "border-blue-500 bg-blue-50"
               : "border-gray-200 hover:border-gray-300"
-          }`}
+            }`}
         >
           <h3 className="font-bold">I want to browse and chat</h3>
           <p className="text-sm text-gray-600">Find and connect with creators</p>
@@ -55,11 +54,10 @@ export function SetupProfileForm() {
 
         <button
           onClick={() => setRole("CREATOR")}
-          className={`w-full p-4 border-2 rounded-lg text-left transition ${
-            role === "CREATOR"
+          className={`w-full p-4 border-2 rounded-lg text-left transition ${role === "CREATOR"
               ? "border-blue-500 bg-blue-50"
               : "border-gray-200 hover:border-gray-300"
-          }`}
+            }`}
         >
           <h3 className="font-bold">I want to earn money</h3>
           <p className="text-sm text-gray-600">Monetize your profile and content</p>

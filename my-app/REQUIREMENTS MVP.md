@@ -642,7 +642,8 @@ NEXT_PUBLIC_MIN_BOOKING_HOURS=2
 - **Gift Subscriptions:** Buy a subscription for another fan
 
 ### Phase 3 (Weeks 25+)
-- **Live Streaming:** RTMP stream integration (e.g., via Mux or AWS IVS)
+- **Video Introduction:** Creators can upload a short video introduction to their profile
+
 - **Fan Tipping:** Send one-time tips on posts/messages
 - **Creator Marketplace:** Sell "Experience Packages" (e.g., "Date + Dinner")
 - **Crypto Payments:** Accept Solana/Ethereum (based on your interest)

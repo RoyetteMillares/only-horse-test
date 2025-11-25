@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { User, DollarSign, Shield, ExternalLink } from 'lucide-react'
+import { constructS3Url } from '@/lib/s3'
 
 export default function CreatorSettingsPage() {
     const { data: session } = useSession()
@@ -55,6 +56,53 @@ export default function CreatorSettingsPage() {
                                 id="displayName"
                                 defaultValue={session?.user?.name || ''}
                             />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="videoIntro">Video Introduction</Label>
+                            <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center hover:border-purple-500 transition-colors cursor-pointer">
+                                <input
+                                    type="file"
+                                    id="videoIntro"
+                                    accept="video/mp4,video/quicktime,video/webm"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+
+                                        try {
+                                            // Get presigned URL via Server Action
+                                            const { getVideoIntroPresignedUrl } = await import('@/app/actions/s3')
+                                            const { uploadUrl, fileKey } = await getVideoIntroPresignedUrl(file.type)
+
+                                            // Upload to S3
+                                            await fetch(uploadUrl, {
+                                                method: 'PUT',
+                                                body: file,
+                                                headers: { 'Content-Type': file.type },
+                                            })
+
+                                            // Update profile with video URL
+                                            const { updateUserProfile } = await import('@/app/actions/user')
+                                            await updateUserProfile({ videoIntroUrl: constructS3Url(fileKey) })
+
+                                            alert('Video uploaded and profile updated successfully!')
+                                        } catch (error) {
+                                            console.error('Upload failed:', error)
+                                            alert('Upload failed')
+                                        }
+                                    }}
+                                />
+                                <label htmlFor="videoIntro" className="cursor-pointer">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="p-3 bg-purple-50 rounded-full">
+                                            <ExternalLink className="w-6 h-6 text-purple-600" />
+                                        </div>
+                                        <p className="font-medium text-gray-900">Click to upload video</p>
+                                        <p className="text-sm text-gray-500">MP4, MOV, or WebM (max 100MB)</p>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
 
                         <div className="grid gap-2">

@@ -71,6 +71,7 @@ model User {
   // Creator-specific fields
   hourlyRate    Float?
   profileImage  String? @db.Text
+  videoIntroUrl String? @db.Text // Video introduction for creators
   isCreator     Boolean @default(false)
   isFeatured    Boolean @default(false) // Admin-controlled featured status
   minHours      Int     @default(2) // Minimum booking duration

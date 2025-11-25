@@ -33,6 +33,7 @@ interface Creator {
   location: string | null
   status: string
   kycStatus: string
+  videoIntroUrl?: string | null
   _count: {
     subscriptions: number
     receivedMessages: number
@@ -174,6 +175,18 @@ export default function CreatorDetailPage({
             {/* Info */}
             <div className="flex-1">
               <h1 className="text-4xl font-bold mb-2">{creator.name}</h1>
+
+              {/* Video Introduction */}
+              {/* @ts-ignore - videoIntroUrl might not be in the type yet */}
+              {creator.videoIntroUrl && (
+                <div className="mb-6">
+                  <video
+                    src={creator.videoIntroUrl}
+                    controls
+                    className="w-full max-w-md rounded-lg shadow-md aspect-video bg-black"
+                  />
+                </div>
+              )}
 
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex items-center gap-1">
